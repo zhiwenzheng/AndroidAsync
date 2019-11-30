@@ -11,10 +11,13 @@ import java.util.ArrayList;
 
 public class FilePart extends StreamPart {
     File file;
-    public FilePart(String name, final File file) {
+    public FilePart(String name, final File file, String fileName) {
         super(name, (int)file.length(), new ArrayList<NameValuePair>() {
             {
-                add(new BasicNameValuePair("filename", file.getName()));
+                if (fileName != null)
+                    add(new BasicNameValuePair("filename", fileName));
+                else
+                    add(new BasicNameValuePair("filename", file.getName()));
             }
         });
 

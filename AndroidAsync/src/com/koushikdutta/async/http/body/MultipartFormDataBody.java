@@ -229,8 +229,8 @@ public class MultipartFormDataBody extends BoundaryEmitter implements AsyncHttpR
         return new ArrayList<>(mParts);
     }
 
-    public void addFilePart(String name, File file) {
-        addPart(new FilePart(name, file));
+    public void addFilePart(String name, File file, String fileName) {
+        addPart(new FilePart(name, file, fileName));
     }
     
     public void addStringPart(String name, String value) {
