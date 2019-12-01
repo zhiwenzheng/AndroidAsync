@@ -30,6 +30,7 @@ import org.bouncycastle.operator.OperatorCreationException;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 
 import java.io.ByteArrayInputStream;
+import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -289,11 +290,22 @@ public class AsyncSSLSocketWrapper implements AsyncSocketWrapper, AsyncSSLSocket
                     int remaining = b.remaining();
                     int before = pending.remaining();
 
-                    SSLEngineResult res;
+                    SSLEngineResult res = null;
                     {
                         // wrap to prevent access to the readBuf
                         ByteBuffer readBuf = allocator.allocate();
-                        res = engine.unwrap(b, readBuf);
+                        try {
+                            res = engine.unwrap(b, readBuf);
+                        } catch (SSLException e) {
+                            // workaround bug of android 8.1
+                            if (e.getCause() instanceof EOFException && remaining == 31 &&
+                                    b.remaining() == 0 && readBuf.remaining() == readBuf.capacity()) {
+                                // Create a new SSLEngineResult.
+                                res = new SSLEngineResult(SSLEngineResult.Status.OK,
+                                        SSLEngineResult.HandshakeStatus.NOT_HANDSHAKING,
+                                        remaining, 0);
+                            }
+                        }
                         addToPending(pending, readBuf);
                         allocator.track(pending.remaining() - before);
                     }
@@ -321,7 +333,7 @@ public class AsyncSSLSocketWrapper implements AsyncSocketWrapper, AsyncSSLSocket
 
                 AsyncSSLSocketWrapper.this.onDataAvailable();
             }
-            catch (SSLException ex) {
+            catch (Exception ex) {
 //                ex.printStackTrace();
                 report(ex);
             }
